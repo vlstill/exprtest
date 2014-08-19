@@ -1,0 +1,19 @@
+dist
+cabal-dev
+*.o
+*.hi
+*.chi
+*.chs.h
+.virtualenv
+.hsenv
+.cabal-sandbox/
+cabal.sandbox.config
+cabal.config
+_build
+
+# vim temporaries & spol
+*~
+.*.swp
+.*.swo
+.mypy_cache
+.stack_work
