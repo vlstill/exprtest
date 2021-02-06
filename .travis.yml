@@ -11,8 +11,7 @@ before_install:
     - pip3 install aiohttp aiofiles pylibacl pyaml mypy
 
 script:
-    - make build
-    - make test
+    - make all
 
 notifications:
   email:
