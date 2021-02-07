@@ -65,7 +65,8 @@ class Admin:
     async def summary(self) -> web.Response:
         async with DB(self.conf).connect() as conn:
             stats_ = await conn.fetch("select * from usage order by req desc")
-            stats = [[row[0].decode("utf-8"), row[1], row[2], round(row[3], 1)]
+            stats = [[row[0].decode("utf-8"), row[1], row[2], round(row[3], 1),
+                     row[4], round(row[5], 1)]
                      for row in stats_]
             since = await conn.fetchval("""
                 select stamp from eval_log order by stamp asc limit 1
