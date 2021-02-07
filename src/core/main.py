@@ -287,25 +287,36 @@ def get_handle_admin(conf: config.Config) \
     return handle_admin
 
 
-async def update_qdir(course: config.Course) -> Optional[str]:
+async def run_command_in_qdir(course: config.Course, *args: str) \
+        -> Tuple[bool, str]:
     try:
-        git = await asyncio.create_subprocess_exec("git", "pull", "--ff-only",
+        cmd = await asyncio.create_subprocess_exec(*args,
                                                    stdout=subprocess.PIPE,
                                                    stderr=subprocess.STDOUT,
                                                    cwd=course.qdir)
     except FileNotFoundError as ex:
-        return f"Error while updating: {ex}"
+        return (False, str(ex))
 
-    out, _ = await asyncio.shield(git.communicate())
+    out, _ = await asyncio.shield(cmd.communicate())
+    return (cmd.returncode == 0,
+            out.decode('utf-8').strip().replace('\n', '; '))
+
+
+async def update_qdir(course: config.Course) -> Optional[str]:
+    ok_u, out_u = await run_command_in_qdir(course, "git", "pull", "--ff-only")
+    ok_s, out_s = await run_command_in_qdir(course,
+                                            "git", "submodule", "update", "-i")
 
     pre = course.stamp
     await course.async_update_stamp()
     logging.getLogger("update-qdir") \
-           .debug(f"Update result {course.name}: {out.decode('utf-8').strip()}"
+           .debug(f"Update result {course.name}: {out_u}; {out_s}"
                   f"\nstamp {pre} → {course.stamp}")
 
-    if git.returncode != 0:
-        return out.decode('utf-8')
+    if not ok_u:
+        return f"Error while updating: {out_u}"
+    if not ok_s:
+        return f"Error while fetching submodules: {out_s}"
     return None
 
 
