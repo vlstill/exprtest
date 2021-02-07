@@ -162,21 +162,37 @@ class DB:
                               join eval_data on ( data_id = eval_data.id )
                               group by ( course )
                           ),
+                          auth as (
+                              select count(*) as authorized,
+                                                 course
+                                from eval_request
+                                join eval_data on ( data_id = eval_data.id )
+                                where hint = false
+                                group by ( course )
+                          ),
                           stat as (
                               select *
                                 from cache
                                 natural join req
+                                natural join auth
                           )
                         select course,
                                req,
                                cache,
-                               100 - cache :: float * 100 / req as ratio
+                               100 - cache :: float * 100 / req as ratio,
+                               authorized,
+                               authorized :: float * 100 / req
+                                  as authorized_ratio
                           from stat
                         union all
                         select 'all' as course,
                                sum( req ) as req,
                                sum( cache ) as cache,
-                               100 - 100 * sum( cache )::float / sum( req ) as ratio
+                               100 - sum( cache )::float * 100 / sum( req )
+                                  as ratio,
+                               sum( authorized ) as authorized,
+                               sum( authorized ) * 100 / sum( req )
+                                  as authorized_ratio
                           from stat;
                     """)
                 self.log.debug("db initialized")
