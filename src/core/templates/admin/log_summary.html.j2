@@ -18,7 +18,7 @@
   <h3>Logs by days</h3>
   <ul>
     {% for date in dates %}
-      <li><a href="log?from={{date.stamp}};to={{date.stamp}}">
+      <li><a href="log?from={{date.stamp}}&to={{date.stamp}}">
           {{date.stamp}} ({{date.count}} entries)
       </a></li>
     {% endfor %}
