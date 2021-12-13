@@ -4,6 +4,7 @@ import aiohttp_jinja2  # type: ignore
 import config
 import dateutil.parser
 import datetime
+import decimal
 import functor
 
 from db import DB
@@ -63,10 +64,20 @@ class Admin:
         return web.Response(status=404, text=f"404 not found{extra}")
 
     async def summary(self) -> web.Response:
+        def disp(i: int, val: Any) -> Any:
+            if 0 < i < 4:
+                return val
+            if isinstance(val, bytes):
+                return val.decode("utf-8")
+            if isinstance(val, (decimal.Decimal, float)):
+                return round(val, 1)
+            if val is None:
+                return "–"
+            return val
+
         async with DB(self.conf).connect() as conn:
             stats_ = await conn.fetch("select * from usage order by req desc")
-            stats = [[row[0].decode("utf-8"), row[1], row[2], round(row[3], 1),
-                     row[4], round(row[5], 1)]
+            stats = [[disp(i, r) for i, r in enumerate(row)]
                      for row in stats_]
             since = await conn.fetchval("""
                 select stamp from eval_log order by stamp asc limit 1

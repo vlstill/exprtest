@@ -16,14 +16,18 @@
   </p>
   <p>
     Statistics since {{since}}:
-    <table>
-      <tr>
-        <td>Course ID</td>
-        <td># of requests</td>
-        <td># of cache entries</td>
-        <td>cache hit ratio (%)</td>
-        <td># of authorized requests</td>
-        <td>authorized ratio (%)</dt>
+    <table style="text-align: right">
+      <tr style="text-align: center">
+        <td rowspan="2">Course ID</td>
+        <td colspan="3"># of requests</td>
+        <td rowspan="2">authorized ratio (%)</dt>
+        <td colspan="3"># of cache entries</td>
+        <td colspan="3">cache hit ratio (%)</td>
+      </tr>
+      <tr style="text-align: center">
+        <td>all</td><td>auth</td><td>noauth</td>
+        <td>all</td><td>auth</td><td>noauth</td>
+        <td>all</td><td>auth</td><td>noauth</td>
       </tr>
       {% for row in stats %}
         <tr>
