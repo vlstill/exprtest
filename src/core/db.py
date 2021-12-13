@@ -146,14 +146,35 @@ class DB:
                         join content as o on ( out_sha = o.sha )
                         join content as a on ( student_sha = a.sha );
 
-                    create or replace view usage as
+                    drop view usage;
+                    create view usage as
                         with
-                          cache as (
+                          cache_raw as (
                             select count(*) as cache,
-                                   course
+                                   course,
+                                   hint
                               from eval_cache
                               join eval_data on ( data_id = eval_data.id )
-                              group by ( course )
+                              group by grouping sets (
+                                  ( course, hint ),
+                                  ( course ) )
+                          ),
+                          cache as (
+                              with c_all as ( select cache, course
+                                                from cache_raw
+                                                where hint is null ),
+                                   c_aut as ( select cache, course
+                                                from cache_raw
+                                                where not hint ),
+                                   c_noa as ( select cache, course
+                                                from cache_raw
+                                                where hint )
+                              select c_all.cache as cache,
+                                     coalesce(c_aut.cache, 0) as cache_auth,
+                                     coalesce(c_noa.cache, 0) as cache_noauth,
+                                     course
+                                from ( c_all left join c_aut using ( course ) )
+                                             left join c_noa using ( course )
                           ),
                           req as (
                             select count(*) as req,
@@ -164,36 +185,48 @@ class DB:
                           ),
                           auth as (
                               select count(*) as authorized,
-                                                 course
+                                     course
                                 from eval_request
                                 join eval_data on ( data_id = eval_data.id )
                                 where hint = false
                                 group by ( course )
                           ),
                           stat as (
-                              select *
+                              select case when array_length(array_agg(course), 1) = 1
+                                          then (array_agg(course))[1]
+                                          else 'all' end
+                                        as course,
+                                     sum( req ) as req,
+                                     sum( authorized ) as auth_req,
+                                     sum( req ) - sum( authorized )
+                                        as noauth_req,
+                                     sum( cache ) as cache_entries,
+                                     sum( cache_auth ) as cache_auth_entries,
+                                     sum( cache_noauth )
+                                        as cache_noauth_entries
                                 from cache
                                 natural join req
                                 natural join auth
+                              group by grouping sets ( (course), () )
                           )
                         select course,
                                req,
-                               cache,
-                               100 - cache :: float * 100 / req as ratio,
-                               authorized,
-                               authorized :: float * 100 / req
-                                  as authorized_ratio
+                               auth_req,
+                               noauth_req,
+                               auth_req * 100 / req as authorized_ratio,
+                               cache_entries,
+                               cache_auth_entries,
+                               cache_noauth_entries,
+                               100 - cast( cache_entries as float ) * 100 / req
+                                  as cache_hit_ratio,
+                               case cache_auth_entries when 0 then null
+                                  else 100 - cast( cache_auth_entries as float ) * 100 / auth_req
+                                  end as cache_auth_hit_ratio,
+                               case cache_noauth_entries when 0 then null
+                                  else 100 - cast( cache_noauth_entries as float ) * 100 / noauth_req
+                                  end as cache_noauth_hit_ratio
                           from stat
-                        union all
-                        select 'all' as course,
-                               sum( req ) as req,
-                               sum( cache ) as cache,
-                               100 - sum( cache )::float * 100 / sum( req )
-                                  as ratio,
-                               sum( authorized ) as authorized,
-                               sum( authorized ) * 100 / sum( req )
-                                  as authorized_ratio
-                          from stat;
+                          order by req desc
                     """)
                 self.log.debug("db initialized")
 
