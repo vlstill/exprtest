@@ -65,7 +65,7 @@ class Admin:
 
     async def summary(self) -> web.Response:
         def disp(i: int, val: Any) -> Any:
-            if 0 < i < 4:
+            if 0 < i < 4 or 4 < i < 8:
                 return val
             if isinstance(val, bytes):
                 return val.decode("utf-8")
