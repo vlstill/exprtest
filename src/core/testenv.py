@@ -194,6 +194,8 @@ class TestEnvironment(object):
                         await self.get_points_pipe(estack)
                     args.append(f"-p{points_wfd}")
                     pass_fds = [points_wfd]
+                    if self.course.isolation:
+                        args.insert(1, f"-C{points_wfd + 1}")
                 if self.conffile:
                     args.append(f"-c{self.conffile}")
 
